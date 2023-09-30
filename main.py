@@ -3,10 +3,12 @@ from tkinter.scrolledtext import ScrolledText
 import nltk
 from nltk.corpus import words
 from textblob import TextBlob
+from nltk import bigrams
+from nltk.probability import ConditionalFreqDist
 from textblob import Word
 import time
 import enchant
-
+import os
 
 # nltk.download("words")
 # nltk.download('punkt')
@@ -15,7 +17,7 @@ from nltk.tokenize import word_tokenize
 import re
 import numbers
 
-file_path = "C:/Users/User/PycharmProjects/NLP_Project/dictionary/english_words_479k.txt"
+file_path = "get your own dictionary path....."
 file = open(file_path, 'r', encoding='utf-8', errors='ignore')
 
 word_list = set()
@@ -29,7 +31,42 @@ for x in file:
 # Check is there any numerical value inside
 list2 = [x for x in word_list if isinstance(x, numbers.Number)]
 
+train_folder_path = 'get yout own other training corpus file.....'
+train_file_path = []
+bigrams_list = []
+
+for train_file in os.listdir(train_folder_path):
+        if os.path.isfile(os.path.join(train_folder_path, train_file)):
+            file_path = os.path.join(train_folder_path, train_file).replace('\\', '/')
+            train_file_path.append(file_path)
+
+word_list_2 = set()  # used to store those word that are not in the word dictionary before
+
+for file_path in train_file_path:
+    with open(file_path, 'r', encoding='utf-8', errors='ignore') as file:
+        training_file = file.read()
+
+    word_tokens = word_tokenize(training_file)
+    word_normalized_token = [token.lower() for token in word_tokens if re.match('^[a-zA-Z\']+$|[.,;]$', token)]
+
+    # print(word_normalized_token)
+    word_list_2.update(word_normalized_token)
+    bigrams_list.extend(list(bigrams(word_normalized_token)))
+
+# print(len(word_list))
+# print(len(word_list_2))
+
+own_dict_bigrams = list(bigrams(word_list))
+# print(len(bigrams_list))
+bigrams_list.extend(own_dict_bigrams)
+word_list.update(word_list_2)
+# print(len(bigrams_list))
+bigrams_freq = ConditionalFreqDist(bigrams_list)
+# print(bigrams_list)
+
+
 class spellingchecker():
+
     def OtherTextWidget(self, string):
         print("Key Press Phase:", string)
 
@@ -80,6 +117,7 @@ class spellingchecker():
     #     lbl.config(text = "Provided Input: "+inp)
 
     def transfer_text(self):
+        # inside here using bigram to find the probability
         input_text = self.input_text_widget.get("1.0", "end-1c")
         split_input_text = re.findall(r"\w+", input_text)
         self.clear_clickable_tags()
@@ -87,8 +125,53 @@ class spellingchecker():
         self.output_text_widget.delete("1.0", "end")
         self.output_text_widget.insert("end", input_text + "\n")
         self.output_text_widget.config(state=tk.DISABLED)
-        print(split_input_text)
-        self.make_words_clickable(split_input_text)
+        # print(split_input_text)
+
+        text_dict = {}  # this is to store all the word where user enter
+        clickable_text = []
+        # print(input_text)
+
+        # text = self.input_text_widget.get(1.0, 'end-1c')
+        # print(text)
+        for index, element in enumerate(split_input_text):
+            # Adding elements to the dictionary with sequence as the key (starting from 1)
+            text_dict[index + 1] = element
+        # print(text_dict)
+
+        # Bigram the input text
+        user_input_bigram = []
+
+        # use to store the found word and store where it is placed in the user input.
+        result_dict = {}
+
+        user_input_tokens = word_tokenize(input_text)
+        user_input_normalized_token = [token.lower() for token in user_input_tokens if re.match('^[a-zA-Z\']+$|[.,;]$', token)]
+
+        user_input_bigram.extend(list(bigrams(user_input_normalized_token)))
+
+        # print(user_input_bigram)
+        found = False
+
+        for bigram_element in user_input_bigram:
+            if bigram_element in bigrams_list:
+                found = True
+                bigram_index = user_input_bigram.index(bigram_element)
+                print("It is found", bigram_element, " ", bigram_index)
+            else:
+                bigram_index = user_input_bigram.index(bigram_element)
+                print(bigram_element, " It is not found. The index of bigram is ", bigram_index)
+                bigram_second_word = bigram_element[1]
+                clickable_text.append(bigram_second_word)
+
+                for index, (first_word, second_word) in enumerate(user_input_bigram, start=1):
+                    result_dict[index] = {
+                        'first word': first_word,
+                        'second word': second_word
+                    }
+
+        print(result_dict)
+
+        self.make_words_clickable(clickable_text)
 
     def clear_clickable_tags(self):
         self.output_text_widget.tag_remove("clickable", "1.0", "end")
@@ -105,6 +188,9 @@ class spellingchecker():
                     start = end
 
     def check_real_words(self,word):
+        # here we used not same as the predicted word but spell is correct, then it is real word error
+        # if not same as predicted word and spell is not in dict, then it is non-real word, then use min edit dist
+
         word = Word(word)
         result = word.spellcheck()
 
@@ -127,10 +213,12 @@ class spellingchecker():
     #     re.findall(r"\w+", sentences)
 
     def show_popup(self,event):
+
         clicked_word_index = self.output_text_widget.index(tk.CURRENT + " wordstart")
         clicked_word_end_index = self.output_text_widget.index(tk.CURRENT + " wordend")
         clicked_word = self.output_text_widget.get(clicked_word_index, clicked_word_end_index).strip()
-        print(clicked_word)
+        # print("you have clicked", clicked_word)
+
         self.check_real_words(clicked_word)
 
         if clicked_word:
