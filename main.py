@@ -1,13 +1,13 @@
 import tkinter as tk
-from tkinter.scrolledtext import ScrolledText
-import nltk
-from nltk.corpus import words
-from textblob import TextBlob
-from nltk import bigrams
+# from tkinter.scrolledtext import ScrolledText
+# import nltk
+# from nltk.corpus import words
+# from textblob import TextBlob
+from nltk import bigrams, FreqDist
 from nltk.probability import ConditionalFreqDist
-from textblob import Word
-import time
-import enchant
+# from textblob import Word
+# import time
+# import enchant
 import os
 
 # nltk.download("words")
@@ -17,7 +17,9 @@ from nltk.tokenize import word_tokenize
 import re
 import numbers
 
-file_path = "get your own dictionary path....."
+root = tk.Tk()
+
+file_path = "C:/Users/User/PycharmProjects/NLP_Project/dictionary/english_words_479k.txt"
 file = open(file_path, 'r', encoding='utf-8', errors='ignore')
 
 word_list = set()
@@ -31,7 +33,7 @@ for x in file:
 # Check is there any numerical value inside
 list2 = [x for x in word_list if isinstance(x, numbers.Number)]
 
-train_folder_path = 'get yout own other training corpus file.....'
+train_folder_path = 'C:/Users/User/Downloads/NLP_Group3/NLP_Group3/Corpus'
 train_file_path = []
 bigrams_list = []
 
@@ -63,6 +65,8 @@ word_list.update(word_list_2)
 # print(len(bigrams_list))
 bigrams_freq = ConditionalFreqDist(bigrams_list)
 # print(bigrams_list)
+freq_dist = FreqDist(bigrams_list)
+print(bigrams_freq)
 
 
 class spellingchecker():
@@ -91,6 +95,7 @@ class spellingchecker():
         else:  # (update)
             full = False
 
+
     # Here we update for chac count and word count and also restrict the char limit
     def update_char_count(self, e=None):
         current_text = self.input_text_widget.get("1.0", "end-1c")
@@ -116,68 +121,103 @@ class spellingchecker():
     #     print(get_inp_arr)
     #     lbl.config(text = "Provided Input: "+inp)
 
+    # Bigram the input text
+    user_input_bigram = []
+
+    # use to store the found word and store where it is placed in the user input.
+    result_dict = {}
+
+    # this is to store all the word where user enter
+    text_dict = {}
+
+    # to store the clickable text to prompt a new window
+    clickable_text = []
+
+    # use to store those real word error (which mean spelling correct but bigram wrong)
+    real_word_list = []
+
+    # use for show the pop out window with the word location
+    clickable_text_with_index = []
+
+   # use to store spelling error
+    non_real_word_dict = {}
     def transfer_text(self):
         # inside here using bigram to find the probability
         input_text = self.input_text_widget.get("1.0", "end-1c")
         split_input_text = re.findall(r"\w+", input_text)
-        self.clear_clickable_tags()
+        # self.clear_clickable_tags()
         self.output_text_widget.config(state=tk.NORMAL)
         self.output_text_widget.delete("1.0", "end")
         self.output_text_widget.insert("end", input_text + "\n")
         self.output_text_widget.config(state=tk.DISABLED)
         # print(split_input_text)
 
-        text_dict = {}  # this is to store all the word where user enter
-        clickable_text = []
+
         # print(input_text)
 
         # text = self.input_text_widget.get(1.0, 'end-1c')
         # print(text)
         for index, element in enumerate(split_input_text):
             # Adding elements to the dictionary with sequence as the key (starting from 1)
-            text_dict[index + 1] = element
+            self.text_dict[index + 1] = element
         # print(text_dict)
 
-        # Bigram the input text
-        user_input_bigram = []
-
-        # use to store the found word and store where it is placed in the user input.
-        result_dict = {}
 
         user_input_tokens = word_tokenize(input_text)
         user_input_normalized_token = [token.lower() for token in user_input_tokens if re.match('^[a-zA-Z\']+$|[.,;]$', token)]
 
-        user_input_bigram.extend(list(bigrams(user_input_normalized_token)))
+        self.user_input_bigram.extend(list(bigrams(user_input_normalized_token)))
 
-        # print(user_input_bigram)
         found = False
 
-        for bigram_element in user_input_bigram:
+        for bigram_element in self.user_input_bigram:
             if bigram_element in bigrams_list:
                 found = True
-                bigram_index = user_input_bigram.index(bigram_element)
-                print("It is found", bigram_element, " ", bigram_index)
+                bigram_index = self.user_input_bigram.index(bigram_element)
+                pass
+                # print("It is found", bigram_element, " ", bigram_index)
             else:
-                bigram_index = user_input_bigram.index(bigram_element)
+                bigram_index = self.user_input_bigram.index(bigram_element)
                 print(bigram_element, " It is not found. The index of bigram is ", bigram_index)
+                bigram_first_word = bigram_element[0]
                 bigram_second_word = bigram_element[1]
-                clickable_text.append(bigram_second_word)
+                item_1 = bigram_second_word
+                item_2 = bigram_index
+                self.clickable_text.append(bigram_second_word)
+                self.clickable_text_with_index.append([[item_1,item_2]])
 
-                for index, (first_word, second_word) in enumerate(user_input_bigram, start=1):
-                    result_dict[index] = {
+                # here we use to save the first word and second word for each bigram and to know the place of the word in user input
+                for index, (first_word, second_word) in enumerate(self.user_input_bigram, start=1):
+                    self.result_dict[index] = {
                         'first word': first_word,
                         'second word': second_word
                     }
 
-        print(result_dict)
+                #bigram second word with their position
+                bigram_second_word_with_pos = [bigram_second_word, bigram_index]
 
-        self.make_words_clickable(clickable_text)
+                # save  the word into either real word or non_real word
+                if bigram_second_word in word_list:
+                    self.real_word_list.append(bigram_second_word_with_pos)
+                else:
+                    self.non_real_word_dict.update({bigram_second_word: bigram_index})
+
+
+                self.check_real_words(bigram_first_word)
+
+        # print(self.real_word_dict)
+        # print(self.non_real_word_dict)
+        # print(self.result_dict)
+        # print(self.check_non_real_words)
+        self.make_words_clickable(self.clickable_text)
+        print(self.clickable_text_with_index)
 
     def clear_clickable_tags(self):
         self.output_text_widget.tag_remove("clickable", "1.0", "end")
 
+    # dont used this function, got something wring at the moment
     def make_words_clickable(self, target_words):
-        self.output_text_widget.tag_configure("clickable", foreground="blue", underline=True)
+        self.output_text_widget.tag_configure("clickable", foreground="blue", underline=False)
         for word in target_words:
             start = "1.0"
             while start:
@@ -187,51 +227,66 @@ class spellingchecker():
                     self.output_text_widget.tag_add("clickable", start, end)
                     start = end
 
-    def check_real_words(self,word):
-        # here we used not same as the predicted word but spell is correct, then it is real word error
+    def check_non_real_words(self,misspelled_word):
         # if not same as predicted word and spell is not in dict, then it is non-real word, then use min edit dist
+        return True
 
-        word = Word(word)
-        result = word.spellcheck()
+    def check_real_words(self, real_word):
+        # here we used not same as the predicted word but spell is correct, then it is real word error
 
-        if word == result[0][0] and result[0][1] == 0:
-            print(f'"{word}" is unable to detect. Will try to search in dictionary')
-            print("Loading.....")
-            time.sleep(5)
-            exists = enchant.dict_exists(word)
-            if exists == True:
-                print("The dictionary for " + word + " exists. It is real word but with wrong spelling")
+        candidate_bigrams = [bigram for bigram in bigrams_list if bigram[0] == real_word]
+        # print(candidate_bigrams)
+        total_bigrams = len(candidate_bigrams)
+
+        predicted_bigrams_probs = []
+        word_found = False
+        for bigram in candidate_bigrams:
+            word, probability = bigram[1], freq_dist[bigram] / total_bigrams
+            is_word_found = any(word_going_to_found == word for word_going_to_found, _ in predicted_bigrams_probs)
+
+            if is_word_found:
+                pass
             else:
-                print("Error Type: Non-word error")
-        elif word == result[0][0] and result[0][1] == 1:
-            print(f'Spelling of "{word}" is correct!')
-        elif word != result[0][0] and result[0][1] < 1:
-            print("Error Type: real-word error")
-            print(f'Spelling of "{word}" is incorrect!')
+                predicted_bigrams_probs.append((word, probability))
+
+        # Sort the candidate bigrams by probability in descending order
+        sorted_predictions = sorted(predicted_bigrams_probs, key=lambda x: x[1], reverse=True)
+
+        # Select the top 5 predicted words
+        top_5_predictions = sorted_predictions[:5]
+
+        # Print the top 5 predicted next words
+        print("Top 5 Predicted Next Words:")
+        for word, probability in top_5_predictions:
+            print(f"Word: {word}, Probability: {probability:.4f}")
 
     # def split_word(sentences):
     #     re.findall(r"\w+", sentences)
 
-    def show_popup(self,event):
+    def show_word_window(self, clicked_word, previous_word):
+        word_window = tk.Toplevel(root)  # Create a new window
+        word_window.title("Clicked Word and Previous Word")
+        label = tk.Label(word_window, text="Clicked Word: " + clicked_word)
+        label.pack(padx=20, pady=5)
+        label = tk.Label(word_window, text="Previous Word: " + previous_word)
+        label.pack(padx=20, pady=5)
 
-        clicked_word_index = self.output_text_widget.index(tk.CURRENT + " wordstart")
-        clicked_word_end_index = self.output_text_widget.index(tk.CURRENT + " wordend")
-        clicked_word = self.output_text_widget.get(clicked_word_index, clicked_word_end_index).strip()
-        # print("you have clicked", clicked_word)
 
-        self.check_real_words(clicked_word)
-
-        if clicked_word:
-            if "clickable" in self.output_text_widget.tag_names(tk.CURRENT):
-                new_window = tk.Toplevel(self.root)
-                new_window.title("Clicked Word")
-                label = tk.Label(new_window, text=f"You clicked: {clicked_word}")
-                label.pack(padx=20, pady=20)
+    def on_word_click(self, event):
+        index = self.output_text_widget.index(tk.CURRENT)  # Get the index of the clicked word
+        clicked_word = self.output_text_widget.get(index + " wordstart", index + " wordend")  # Extract the clicked word
+        text = self.output_text_widget.get("1.0", index)  # Get the text from the beginning to the clicked word
+        words = re.findall(r'\w+', text)  # Extract words using regular expression
+        if len(words) >= 2:
+            clicked_word = words[-1]  # Get the last word (clicked word)
+            previous_word = words[-2]  # Get the second last word (previous word)
+            self.show_word_window(clicked_word, previous_word)  # Display the clicked word and its previous word in a new window
+        else:
+            self.show_word_window("No previous word", "No clicked word")
 
     def __init__(self):
         super().__init__()
-        self.root = tk.Tk()
-        self.frame = tk.Frame(self.root)
+        self.frame = tk.Frame(root)
         self.frame.pack(padx=10, pady=10)
 
         self.input_text_widget = tk.Text(self.frame, height=5, width=30)
@@ -251,7 +306,7 @@ class spellingchecker():
         self.output_text_scrollbar.grid(row=0, column=4, sticky='ns')
         self.output_text_widget.config(yscrollcommand=self.output_text_scrollbar.set)
 
-        self.output_text_widget.tag_bind("clickable", "<Button-1>", self.show_popup)
+        self.output_text_widget.bind("<ButtonRelease-1>", self.on_word_click)
 
         self.char_count = tk.StringVar()
         self.char_count.set("Character Count: 0/500")
@@ -259,10 +314,10 @@ class spellingchecker():
         self.word_count = tk.StringVar()
         self.word_count.set("Word Count: 0")
 
-        self.char_count_label = tk.Label(self.root, textvariable=self.char_count)
+        self.char_count_label = tk.Label(root, textvariable=self.char_count)
         self.char_count_label.pack()
 
-        self.word_count_label = tk.Label(self.root, textvariable=self.word_count)
+        self.word_count_label = tk.Label(root, textvariable=self.word_count)
         self.word_count_label.pack()
 
         # printButton = tk.Button(root,
@@ -279,7 +334,7 @@ class spellingchecker():
         self.input_text_widget.bind('<KeyRelease>', self.AfterRestrict)  # (update)
         self.input_text_widget.bind('<KeyRelease>', self.update_char_count)
 
-        self.root.mainloop()
+        root.mainloop()
 
 
 if __name__ == "__main__":
