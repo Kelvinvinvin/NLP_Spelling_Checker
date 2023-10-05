@@ -66,7 +66,7 @@ word_list.update(word_list_2)
 bigrams_freq = ConditionalFreqDist(bigrams_list)
 # print(bigrams_list)
 freq_dist = FreqDist(bigrams_list)
-print(bigrams_freq)
+# print(bigrams_freq)
 
 
 class spellingchecker():
@@ -142,6 +142,16 @@ class spellingchecker():
    # use to store spelling error
     non_real_word_dict = {}
     def transfer_text(self):
+
+        # here use to clear out the list and dictionary
+        self.user_input_bigram = []
+        self.result_dict = {}
+        self.text_dict = {}
+        self.clickable_text = []
+        self.real_word_list = []
+        self.clickable_text_with_index = []
+        self.non_real_word_dict = {}
+
         # inside here using bigram to find the probability
         input_text = self.input_text_widget.get("1.0", "end-1c")
         split_input_text = re.findall(r"\w+", input_text)
@@ -207,7 +217,7 @@ class spellingchecker():
 
         # print(self.real_word_dict)
         # print(self.non_real_word_dict)
-        # print(self.result_dict)
+        print(self.result_dict)
         # print(self.check_non_real_words)
         self.make_words_clickable(self.clickable_text)
         print(self.clickable_text_with_index)
@@ -263,24 +273,34 @@ class spellingchecker():
     # def split_word(sentences):
     #     re.findall(r"\w+", sentences)
 
-    def show_word_window(self, clicked_word, previous_word):
+    def show_word_window(self, clicked_word, previous_word, whole_sentence):
         word_window = tk.Toplevel(root)  # Create a new window
         word_window.title("Clicked Word and Previous Word")
         label = tk.Label(word_window, text="Clicked Word: " + clicked_word)
         label.pack(padx=20, pady=5)
         label = tk.Label(word_window, text="Previous Word: " + previous_word)
         label.pack(padx=20, pady=5)
+        label = tk.Label(word_window, text="First to current clicked Word: " + whole_sentence)
+        label.pack(padx=20, pady=5)
 
+    # 如何拿到current word position. get the whole sentences until the word we clicked. The do splitting. This splitting should include the punctuation
+    # since bigram created also include the punctuation
+    # then we compare the position of previous word with clickable_word_with_index 就可以拿到需要让那个文字clickable
 
+    # 第二种 方法直接无视什么index，直接拿previous word 丢进去比较就好了
     def on_word_click(self, event):
         index = self.output_text_widget.index(tk.CURRENT)  # Get the index of the clicked word
-        clicked_word = self.output_text_widget.get(index + " wordstart", index + " wordend")  # Extract the clicked word
-        text = self.output_text_widget.get("1.0", index)  # Get the text from the beginning to the clicked word
+        # clicked_word = self.output_text_widget.get(index + " wordstart", index + " wordend")  # Extract the clicked word
+        text = self.output_text_widget.get("1.0", index + "wordend")  # Get the text from the beginning to the clicked word
+        # print("this is the index of current clicked word: ", index + "wordend")
         words = re.findall(r'\w+', text)  # Extract words using regular expression
+        clicked_word = words[-1]  # Get the last word (clicked word)
+        print(words)
+        clicked_word_index = words.index(clicked_word) + 1
+        print(clicked_word_index)
         if len(words) >= 2:
-            clicked_word = words[-1]  # Get the last word (clicked word)
-            previous_word = words[-2]  # Get the second last word (previous word)
-            self.show_word_window(clicked_word, previous_word)  # Display the clicked word and its previous word in a new window
+            previous_word = words[-2] # Get the second last word (previous word)
+            self.show_word_window(clicked_word, previous_word, str(clicked_word_index))  # Display the clicked word and its previous word in a new window
         else:
             self.show_word_window("No previous word", "No clicked word")
 
