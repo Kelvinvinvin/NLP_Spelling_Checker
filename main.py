@@ -16,7 +16,7 @@ file = open(file_path, 'r', encoding='utf-8', errors='ignore')
 word_list = set()
 
 for x in file:
-    #here we got to tokenize and preprocessing the word dictionary
+    # here we got to tokenize and preprocessing the word dictionary
     tokens = word_tokenize(x)
     normalized_tokens = [token.lower() for token in tokens if re.match('^[a-zA-Z\']+$|[.,;]$', token)]
     word_list.update(normalized_tokens)
@@ -29,9 +29,9 @@ train_file_path = []
 bigrams_list = []
 
 for train_file in os.listdir(train_folder_path):
-        if os.path.isfile(os.path.join(train_folder_path, train_file)):
-            file_path = os.path.join(train_folder_path, train_file).replace('\\', '/')
-            train_file_path.append(file_path)
+    if os.path.isfile(os.path.join(train_folder_path, train_file)):
+        file_path = os.path.join(train_folder_path, train_file).replace('\\', '/')
+        train_file_path.append(file_path)
 
 word_list_2 = set()  # used to store those word that are not in the word dictionary before
 
@@ -59,9 +59,10 @@ bigrams_freq = ConditionalFreqDist(bigrams_list)
 freq_dist = FreqDist(bigrams_list)
 # print(bigrams_freq)
 
+root = tk.Tk()
 
-class spellingchecker():
 
+class SpellingChecker():
     def OtherTextWidget(self, string):
         print("Key Press Phase:", string)
 
@@ -85,7 +86,6 @@ class spellingchecker():
             full = True  # (update)
         else:  # (update)
             full = False
-
 
     # Here we update for chac count and word count and also restrict the char limit
     def update_char_count(self, e=None):
@@ -130,7 +130,6 @@ class spellingchecker():
     # use for show the pop out window with the word location
     clickable_text_with_index = []
 
-
     # use for label the real word
     real_word_label = {}
 
@@ -139,6 +138,10 @@ class spellingchecker():
 
     # use for label the real word
     non_real_word_label = {}
+
+    # use to save the word and position of clicked word
+    clicked_word_list = []
+
     def transfer_text(self):
 
         # here use to clear out the list and dictionary
@@ -153,9 +156,9 @@ class spellingchecker():
         self.non_real_word_label = {}
 
         # inside here using bigram to find the probability
-        input_text = self.input_text_widget.get("1.0", "end-1c")  #to get whole sentence from input
-        split_input_text = re.findall(r"\w+", input_text)  #split sentences into one by one
-        print(split_input_text)
+        input_text = self.input_text_widget.get("1.0", "end-1c")  # to get whole sentence from input
+        split_input_text = nltk.tokenize.word_tokenize(input_text.lower())  # split sentences into one by one
+        # print(split_input_text)
         # self.clear_clickable_tags()
 
         for index, element in enumerate(split_input_text):
@@ -164,10 +167,11 @@ class spellingchecker():
         # print(text_dict)
 
         user_input_tokens = word_tokenize(input_text)
-        user_input_normalized_token = [token.lower() for token in user_input_tokens if re.match('^[a-zA-Z\']+$|[.,;]$', token)]
+        user_input_normalized_token = [token.lower() for token in user_input_tokens if
+                                       re.match('^[a-zA-Z\']+$|[.,;]$', token)]
 
-        self.user_input_bigram.extend(list(bigrams(user_input_normalized_token))) #until here we got a list that contain the bigram of user input
-
+        self.user_input_bigram.extend(list(
+            bigrams(user_input_normalized_token)))  # until here we got a list that contain the bigram of user input
 
         # here is where we used to identify the real word or non-real word error
         for bigram_element in self.user_input_bigram:
@@ -178,7 +182,8 @@ class spellingchecker():
 
             else:
                 # here is if not found in the bigram list, now we need to determine in real word err or non real word err
-                bigram_index = self.user_input_bigram.index(bigram_element) # this is use to find which bigram index in the user input
+                bigram_index = self.user_input_bigram.index(
+                    bigram_element)  # this is use to find which bigram index in the user input
                 # print(bigram_element, " It is not found. The index of bigram is ", bigram_index)
                 bigram_first_word = bigram_element[0]
                 bigram_second_word = bigram_element[1]
@@ -186,17 +191,16 @@ class spellingchecker():
                 item_1 = bigram_second_word
                 item_2 = second_word_index
                 self.clickable_text.append(bigram_second_word)
-                self.clickable_text_with_index.append([[item_1,item_2]])
-
+                self.clickable_text_with_index.append([[item_1, item_2]])
 
                 # here we use to save the first word and second word for each bigram and to know the place of the word in user input
                 for index, (first_word, second_word) in enumerate(self.user_input_bigram, start=1):
-                    self.result_dict[index] = {
+                    self.result_dict[index - 1] = {
                         'first word': first_word,
                         'second word': second_word
                     }
 
-                #bigram second word with their position
+                # bigram second word with their position
                 # this same clickable text with index
                 user_input_first_word_with_pos = [split_input_text[0], 1]
                 bigram_second_word_with_pos = [bigram_second_word, second_word_index]
@@ -205,25 +209,24 @@ class spellingchecker():
                 if split_input_text[0] not in word_list:
                     self.non_real_word_list.append(user_input_first_word_with_pos)
 
-
                 if bigram_second_word in word_list:
                     self.real_word_list.append(bigram_second_word_with_pos)
                 else:
                     self.non_real_word_list.append(bigram_second_word_with_pos)
 
-        #for real_word_error in self.real_word_list:
-                self.check_real_words(bigram_second_word)
+        # for real_word_error in self.real_word_list:
+        # self.check_real_words(bigram_second_word)
 
         # print(self.non_real_word_list)
         # print(self.real_word_dict)
         # print(self.result_dict)
         if not self.non_real_word_list:
-            print("the list is empty")
+            print(" ")
         else:
             for item in split_input_text:
                 non_real_word_list_only_word = [item[0] for item in self.non_real_word_list]
                 non_real_word_list_with_position = [item[1] for item in self.non_real_word_list]
-                user_input_word_index = split_input_text.index(item) # to get the index of word of the user input
+                user_input_word_index = split_input_text.index(item)  # to get the index of word of the user input
 
                 if user_input_word_index in non_real_word_list_with_position:
                     pointed_word = split_input_text[user_input_word_index]
@@ -231,16 +234,16 @@ class spellingchecker():
                     end_char_index = start_char_index + len(pointed_word) - 1
                     word_index = f"{user_input_word_index}"
                     self.non_real_word_label.setdefault(pointed_word, {})[word_index] = (
-                         start_char_index, end_char_index
+                        start_char_index, end_char_index
                     )
 
         if not self.real_word_list:
-            print("the list is empty")
+            print(" ")
         else:
             for item in split_input_text:
                 real_word_list_only_word = [item[0] for item in self.real_word_list]
                 real_word_list_with_position = [item[1] for item in self.real_word_list]
-                user_input_word_index = split_input_text.index(item) # to get the index of word of the user input
+                user_input_word_index = split_input_text.index(item)  # to get the index of word of the user input
 
                 if user_input_word_index in real_word_list_with_position:
                     pointed_word = split_input_text[user_input_word_index]
@@ -248,9 +251,8 @@ class spellingchecker():
                     end_char_index = start_char_index + len(pointed_word) - 1
                     word_index = f"{user_input_word_index}"
                     self.real_word_label.setdefault(pointed_word, {})[word_index] = (
-                         start_char_index, end_char_index
+                        start_char_index, end_char_index
                     )
-
 
         # print(self.check_non_real_words)
         # print(self.non_real_word_label)
@@ -270,22 +272,22 @@ class spellingchecker():
             for category, (start, end) in indices.items():
                 self.output_text_widget.insert(tk.END, input_text[:start])  # Add text before the word
                 self.output_text_widget.insert(tk.END, input_text[start:end + 1])  # Add the word
-                self.output_text_widget.tag_add("blue_bg", f"1.{start}", f"1.{end + 1}")  # Highlight with blue background
+                self.output_text_widget.tag_add("blue_bg", f"1.{start}",
+                                                f"1.{end + 1}")  # Highlight with blue background
                 input_text = input_text[end + 1:]
 
         self.output_text_widget.insert(tk.END, input_text)  # Add the remaining text after the highlighted range
         self.output_text_widget.config(state=tk.DISABLED)  # Disable editing of output textbox
 
-        # Process words from word_indices_2 dictionary and highlight them with blue background
-         # Remove processed part from input text
+        # print(self.result_dict)
         print(self.real_word_list)
-
-    def highlight_word(self, start_char_index, end_char_index):
-        self.output_text_widget.tag_add("red", start_char_index, end_char_index)
-        self.output_text_widget.tag_configure("red", foreground="red")
+        # print(self.non_real_word_list)
+        # print(self.user_input_bigram)
 
     def on_click(self, event):
         # Get the clicked word
+        self.clicked_word_list = []
+
         start_index = event.widget.index("current wordstart")
 
         # this is purposely use for extarct word because .get() will not include the last character hence we need to add 1 to it
@@ -295,23 +297,51 @@ class spellingchecker():
         end_index = event.widget.index("current wordend-1c")
 
         extracted_text = self.output_text_widget.get(start_index, end_index_word_extract)
-        #print(extracted_text)
+        print(extracted_text)
 
         index = self.output_text_widget.index("current wordend")
         first_word_until_clicked = self.output_text_widget.get("1.0", index)
-        #print(first_word_until_clicked)
+        # print(first_word_until_clicked)
 
+        # assumption: we include the punctuation in word predicting for better model structure but during the suggestion, we will exclude the punctuation for better word structure
         first_word_until_clicked_split = nltk.tokenize.word_tokenize(first_word_until_clicked)
 
+        # this is used to find the word index of the clicked word
         word_index = len(first_word_until_clicked_split) - 1
-        print(word_index)
 
-        # ok until here we got the character indices and next we need some
+        # this is used to get the last word index to prevent any error when click the last word
+        input_text = self.input_text_widget.get("1.0", "end-1c")  # to get whole sentence from input
+        split_input_text = nltk.tokenize.word_tokenize(input_text.lower())  # split sentences into one by one
+
+        # purpose for this list is used to check whether the word we click exist in real word list or not
+        word_list_verified_used = [extracted_text, word_index]
+        print(word_list_verified_used)
+
+        # purpose for this list is used to save the clicked word into a list actually can use this 'word_list_verified_used' list also,
+        # we may change word_list_verified_used to this name
+        self.clicked_word_list = [extracted_text, word_index]
+
+        if word_list_verified_used in self.real_word_list:
+            if len(first_word_until_clicked_split) >= 2:
+                # to get the previous word from the word we clicked (purposely used for real word error suggestion)
+                previous_word_clicked = first_word_until_clicked_split[-2]
+
+                # here we do real word check
+                # here we need to do the condition check whether the word is exist in the real word list or not
+                if word_index == 0:
+                    self.tree.delete(*self.tree.get_children())
+                    print("")
+
+                else:
+                    print(word_index)
+                    self.check_real_words(previous_word_clicked)
+
+        # here we do non real word check
 
         # Display the word index at the bottom
         self.bottom_label.config(text=f"Start Index: {start_index}, End Index: {end_index}")
 
-    def check_non_real_words(self,misspelled_word):
+    def check_non_real_words(self, misspelled_word):
         # if not same as predicted word and spell is not in dict, then it is non-real word, then use min edit dist
         return True
 
@@ -342,45 +372,35 @@ class spellingchecker():
         # Print the top 5 predicted next words
         # print("Top 5 Predicted Next Words:")
         for word, probability in top_5_predictions:
-            print(" ")
-            # print(f"Word: {word}, Probability: {probability:.4f}")
+            print("")
+            # print(top_5_predictions)
+            print(f"Word: {word}, Probability: {probability:.4f}")
 
-    # def split_word(sentences):
-    #     re.findall(r"\w+", sentences)
+        self.process_tuple_list(top_5_predictions)
 
-    def show_word_window(self, event):
-
-        return True
-    # 如何拿到current word position. get the whole sentences until the word we clicked. The do splitting. This splitting should include the punctuation
-    # since bigram created also include the punctuation
-    # then we compare the position of previous word with clickable_word_with_index 就可以拿到需要让那个文字clickable
-
-    # 第二种 方法直接无视什么index，直接拿previous word 丢进去比较就好了
-    # Function to be called when the Treeview item is clicked
-    def on_treeview_click(self,event):
-        item = self.tree.item(self.tree.focus())['values']
-        if item:
-            selected_word = item[0]
-            self.output_text_widget.delete(0, tk.END)
-            self.output_text_widget.insert(0, selected_word)
-
-# Function to be called when the upper right textbox is clicked
-    def on_upper_right_click(self,event):
-        # Get the selected text from the upper right textbox
-        selected_text = self.output_text_widget.get()
-        # Set the lower right textbox with the selected text
-        self.label_lower_left.delete(0, tk.END)
-        self.label_lower_left.insert(0, selected_text)
-        # Clear existing items in the treeview
+    def process_tuple_list(self, tuple_list):
         self.tree.delete(*self.tree.get_children())
-        # Insert the list into the treeview as a table
-        for item in ['a', 'b', 'c']:
-            self.tree.insert("", "end", values=(item))
+        for item in tuple_list:
+            word, value = item  # Unpack the tuple into word and value
+            self.tree.insert('', 'end', values=(word, value))
 
-    def __init__(self,root):
+    def update_input_text(self, event):
+        selected_item = self.tree.item(self.tree.selection())
+        selected_word = selected_item['values'][0]
+        current_text = self.input_text_widget.get("1.0", "end-1c")
+        words = nltk.tokenize.word_tokenize(current_text)
+        print(self.clicked_word_list)
+        clicked_index = self.clicked_word_list[1]
+        if len(words) >= 2:
+            words[clicked_index] = selected_word
+            updated_text = ' '.join(words)
+            self.input_text_widget.delete("1.0", "end-1c")
+            self.input_text_widget.insert("1.0", updated_text)
+
+    def __init__(self, root):
         super().__init__()
         self.root = root
-        self.root.geometry("800x800")
+        self.root.geometry("1200x600")
 
         self.input_text_widget = tk.Text(self.root, height=5, width=30)
         self.input_text_widget.grid(row=0, column=1, padx=10, pady=10, columnspan=2)
@@ -391,13 +411,14 @@ class spellingchecker():
         self.output_text_widget = tk.Text(self.root, height=5, width=30, state=tk.DISABLED)
         self.output_text_widget.grid(row=0, column=4, padx=10, pady=10, columnspan=2)
         self.output_text_widget.tag_configure("red_bg", background="light coral")  # Configure tag for red background
-        self.output_text_widget.tag_configure("blue_bg", background="light blue")  # Configure tag for blu
+        self.output_text_widget.tag_configure("blue_bg", background="light blue")  # Configure tag for blue
 
-        self.tree = ttk.Treeview(root, columns=("Words"), show="headings")
-        self.tree.heading("Words", text="Words")
+        self.tree = ttk.Treeview(root, columns=("Word", "Value"), show="headings")
+        self.tree.heading("Word", text="Word")
+        self.tree.heading("Value", text="Value")
         self.tree.grid(row=1, column=2, columnspan=1)
 
-        self.tree.bind("<ButtonRelease-1>", self.on_treeview_click)
+        self.tree.bind("<ButtonRelease-1>", self.update_input_text)
 
         self.bottom_label = tk.Label(root, text="Start Index: , End Index: ")
         self.bottom_label.grid(row=2, column=2, padx=10, pady=10)
@@ -424,4 +445,4 @@ class spellingchecker():
 
 
 if __name__ == "__main__":
-    program = spellingchecker(root)
+    program = SpellingChecker(root)
