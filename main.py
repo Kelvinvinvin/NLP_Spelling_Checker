@@ -7,6 +7,8 @@ from tkinter import ttk
 from nltk.tokenize import word_tokenize
 import re
 import numbers
+import Levenshtein
+from tkinter import scrolledtext
 
 root = tk.Tk()
 
@@ -58,9 +60,6 @@ bigrams_freq = ConditionalFreqDist(bigrams_list)
 # print(bigrams_list)
 freq_dist = FreqDist(bigrams_list)
 # print(bigrams_freq)
-
-root = tk.Tk()
-
 
 class SpellingChecker():
     def OtherTextWidget(self, string):
@@ -337,13 +336,39 @@ class SpellingChecker():
                     self.check_real_words(previous_word_clicked)
 
         # here we do non real word check
+        if word_list_verified_used in self.non_real_word_list:
+            self.check_non_real_word(extracted_text)
 
         # Display the word index at the bottom
         self.bottom_label.config(text=f"Start Index: {start_index}, End Index: {end_index}")
 
-    def check_non_real_words(self, misspelled_word):
+    def calculate_edit_distance(self, misspelled_word):
         # if not same as predicted word and spell is not in dict, then it is non-real word, then use min edit dist
-        return True
+
+        # next we are going to do this and solve how to check the error word when there is only one word is enter
+        # (by adding the first word from user input into non_real_word_list)
+        # the procedure is almost the same as what we done in real word error
+        distances = [(word, Levenshtein.distance(misspelled_word, word)) for word in word_list]
+
+        # Sort words based on edit distance in ascending order
+        sorted_distances = sorted(distances, key=lambda x: x[1])
+
+        # Select top 5 predictions along with their distances
+        top_predictions = sorted_distances[:5]
+
+        return top_predictions
+
+    def check_non_real_word(self, non_real_word):
+        # Get predictions for a list of words
+        predictions = self.calculate_edit_distance(non_real_word)
+        print(predictions)
+
+        print(f"Misspelled word: {non_real_word}")
+        print(f"Top 5 suggestions:")
+        for suggestion, distance in predictions:
+            print(f"- {suggestion} (Edit Distance: {distance})")
+        print()
+        self.process_tuple_list(predictions)
 
     def check_real_words(self, real_word):
         # here we used not same as the predicted word but spell is correct, then it is real word error
@@ -397,32 +422,51 @@ class SpellingChecker():
             self.input_text_widget.delete("1.0", "end-1c")
             self.input_text_widget.insert("1.0", updated_text)
 
+    # This is for search window update
+    def update_list(self, event):
+        user_input = self.entry.get().lower()
+        filtered_list = [word for word in word_list if user_input in word.lower()]
+        filtered_list.sort()
+        self.text.delete(1.0, tk.END)
+        for word in filtered_list:
+            self.text.insert(tk.END, word + '\n')
+
     def __init__(self, root):
         super().__init__()
         self.root = root
         self.root.geometry("1200x600")
 
+        # This is for input window
         self.input_text_widget = tk.Text(self.root, height=5, width=30)
-        self.input_text_widget.grid(row=0, column=1, padx=10, pady=10, columnspan=2)
+        self.input_text_widget.grid(row=0, column=0, padx=10, pady=10)
 
+        # This is the check button
         self.transfer_button = tk.Button(self.root, text="Check Spelling", command=self.transfer_text)
-        self.transfer_button.grid(row=0, column=2, padx=10, pady=10, columnspan=2)
+        self.transfer_button.grid(row=0, column=1, padx=10, pady=10)
 
+        # This is for output window
         self.output_text_widget = tk.Text(self.root, height=5, width=30, state=tk.DISABLED)
-        self.output_text_widget.grid(row=0, column=4, padx=10, pady=10, columnspan=2)
+        self.output_text_widget.grid(row=0, column=2, padx=10, pady=10)
         self.output_text_widget.tag_configure("red_bg", background="light coral")  # Configure tag for red background
         self.output_text_widget.tag_configure("blue_bg", background="light blue")  # Configure tag for blue
 
+        # This is for suggestion window
         self.tree = ttk.Treeview(root, columns=("Word", "Value"), show="headings")
         self.tree.heading("Word", text="Word")
         self.tree.heading("Value", text="Value")
-        self.tree.grid(row=1, column=2, columnspan=1)
+        self.tree.grid(row=1, column=0, columnspan=2, padx=10, pady=10)
 
-        self.tree.bind("<ButtonRelease-1>", self.update_input_text)
+        # This is for searching window
+        self.entry_label = tk.Label(root, text="Enter a word:")
+        self.entry_label.grid(row=5, column=0, padx=10, pady=10)
+        self.entry = tk.Entry(root, width=30)
+        self.entry.grid(row=5, column=1, padx=10, pady=10)
+        self.text = scrolledtext.ScrolledText(root, width=40, height=10)
+        self.text.grid(row=6, column=0, columnspan=3, padx=10, pady=10)
 
+        # This is for show char and word index
         self.bottom_label = tk.Label(root, text="Start Index: , End Index: ")
-        self.bottom_label.grid(row=2, column=2, padx=10, pady=10)
-        self.output_text_widget.bind("<ButtonRelease-1>", self.on_click)
+        self.bottom_label.grid(row=1, column=4, padx=10, pady=10)
 
         self.char_count = tk.StringVar()
         self.char_count.set("Character Count: 0/500")
@@ -431,15 +475,18 @@ class SpellingChecker():
         self.word_count.set("Word Count: 0")
 
         self.char_count_label = tk.Label(root, textvariable=self.char_count)
-        self.char_count_label.grid(row=2, column=0, padx=10, pady=10)
+        self.char_count_label.grid(row=1, column=2, padx=10, pady=10)
 
         self.word_count_label = tk.Label(root, textvariable=self.word_count)
-        self.word_count_label.grid(row=2, column=1, padx=10, pady=10)
+        self.word_count_label.grid(row=1, column=3, padx=10, pady=10)
 
-        # Solution - Step 2. get input event from widget
+        # This is used to bind the event
         self.input_text_widget.bind('<Key>', self.Restrict)
         self.input_text_widget.bind('<KeyRelease>', self.AfterRestrict)  # (update)
         self.input_text_widget.bind('<KeyRelease>', self.update_char_count)
+        self.output_text_widget.bind("<ButtonRelease-1>", self.on_click)
+        self.tree.bind("<ButtonRelease-1>", self.update_input_text)
+        self.entry.bind('<KeyRelease>', self.update_list)
 
         root.mainloop()
 
