@@ -9,6 +9,7 @@ import re
 import numbers
 import Levenshtein
 from tkinter import scrolledtext
+import string
 
 root = tk.Tk()
 
@@ -48,18 +49,21 @@ for file_path in train_file_path:
     word_list_2.update(word_normalized_token)
     bigrams_list.extend(list(bigrams(word_normalized_token)))
 
-# print(len(word_list))
-# print(len(word_list_2))
 
 own_dict_bigrams = list(bigrams(word_list))
-# print(len(bigrams_list))
 bigrams_list.extend(own_dict_bigrams)
 word_list.update(word_list_2)
-# print(len(bigrams_list))
 bigrams_freq = ConditionalFreqDist(bigrams_list)
-# print(bigrams_list)
 freq_dist = FreqDist(bigrams_list)
-# print(bigrams_freq)
+
+# remove punctuation for word searching
+word_list_exclude_punc = [char for char in word_list if char not in string.punctuation]
+contains_punctuation = any(char in string.punctuation for char in word_list_exclude_punc)
+
+if contains_punctuation:
+    print("The list contains punctuation.")
+else:
+    print("The list does not contain punctuation.")
 
 class SpellingChecker():
     def OtherTextWidget(self, string):
@@ -105,11 +109,6 @@ class SpellingChecker():
         else:  # (update)
             full = False
 
-    # def printInput():
-    #     inp = input_text_widget.get(1.0, "end-1c")
-    #     get_inp_arr = TextBlob(inp).words
-    #     print(get_inp_arr)
-    #     lbl.config(text = "Provided Input: "+inp)
 
     # Bigram the input text
     user_input_bigram = []
@@ -117,17 +116,8 @@ class SpellingChecker():
     # use to store the found word and store where it is placed in the user input.
     result_dict = {}
 
-    # this is to store all the word where user enter
-    text_dict = {}
-
-    # to store the clickable text to prompt a new window
-    clickable_text = []
-
     # use to store those real word error (which mean spelling correct but bigram wrong)
     real_word_list = []
-
-    # use for show the pop out window with the word location
-    clickable_text_with_index = []
 
     # use for label the real word
     real_word_label = {}
@@ -146,10 +136,7 @@ class SpellingChecker():
         # here use to clear out the list and dictionary
         self.user_input_bigram = []
         self.result_dict = {}
-        self.text_dict = {}
-        self.clickable_text = []
         self.real_word_list = []
-        self.clickable_text_with_index = []
         self.non_real_word_list = []
         self.real_word_label = {}
         self.non_real_word_label = {}
@@ -157,13 +144,11 @@ class SpellingChecker():
         # inside here using bigram to find the probability
         input_text = self.input_text_widget.get("1.0", "end-1c")  # to get whole sentence from input
         split_input_text = nltk.tokenize.word_tokenize(input_text.lower())  # split sentences into one by one
-        # print(split_input_text)
-        # self.clear_clickable_tags()
+        user_input_first_word_with_pos = [split_input_text[0], 0]
 
-        for index, element in enumerate(split_input_text):
-            # Adding elements to the dictionary with sequence as the key (starting from 1)
-            self.text_dict[index + 1] = element
-        # print(text_dict)
+        if split_input_text[0] not in word_list:
+            self.non_real_word_list.append(user_input_first_word_with_pos)
+
 
         user_input_tokens = word_tokenize(input_text)
         user_input_normalized_token = [token.lower() for token in user_input_tokens if
@@ -184,13 +169,8 @@ class SpellingChecker():
                 bigram_index = self.user_input_bigram.index(
                     bigram_element)  # this is use to find which bigram index in the user input
                 # print(bigram_element, " It is not found. The index of bigram is ", bigram_index)
-                bigram_first_word = bigram_element[0]
                 bigram_second_word = bigram_element[1]
                 second_word_index = bigram_index + 1
-                item_1 = bigram_second_word
-                item_2 = second_word_index
-                self.clickable_text.append(bigram_second_word)
-                self.clickable_text_with_index.append([[item_1, item_2]])
 
                 # here we use to save the first word and second word for each bigram and to know the place of the word in user input
                 for index, (first_word, second_word) in enumerate(self.user_input_bigram, start=1):
@@ -201,24 +181,17 @@ class SpellingChecker():
 
                 # bigram second word with their position
                 # this same clickable text with index
-                user_input_first_word_with_pos = [split_input_text[0], 1]
                 bigram_second_word_with_pos = [bigram_second_word, second_word_index]
 
-                # save the word into either real word or non_real word
-                if split_input_text[0] not in word_list:
-                    self.non_real_word_list.append(user_input_first_word_with_pos)
+                print('This is the first word: ', split_input_text[0])
 
+                # save the word into either real word or non_real word
                 if bigram_second_word in word_list:
                     self.real_word_list.append(bigram_second_word_with_pos)
                 else:
                     self.non_real_word_list.append(bigram_second_word_with_pos)
 
-        # for real_word_error in self.real_word_list:
-        # self.check_real_words(bigram_second_word)
 
-        # print(self.non_real_word_list)
-        # print(self.real_word_dict)
-        # print(self.result_dict)
         if not self.non_real_word_list:
             print(" ")
         else:
@@ -253,12 +226,11 @@ class SpellingChecker():
                         start_char_index, end_char_index
                     )
 
-        # print(self.check_non_real_words)
-        # print(self.non_real_word_label)
+
         self.output_text_widget.config(state=tk.NORMAL)  # here is to insert into the output textbox
         self.output_text_widget.delete("1.0", "end")
 
-        # use to highlight the real word error in blue
+        # use to highlight the non real word error in red
         for word, indices in self.non_real_word_label.items():
             for category, (start, end) in indices.items():
                 self.output_text_widget.insert(tk.END, input_text[:start])  # Add text before the word
@@ -278,10 +250,6 @@ class SpellingChecker():
         self.output_text_widget.insert(tk.END, input_text)  # Add the remaining text after the highlighted range
         self.output_text_widget.config(state=tk.DISABLED)  # Disable editing of output textbox
 
-        # print(self.result_dict)
-        print(self.real_word_list)
-        # print(self.non_real_word_list)
-        # print(self.user_input_bigram)
 
     def on_click(self, event):
         # Get the clicked word
@@ -296,11 +264,9 @@ class SpellingChecker():
         end_index = event.widget.index("current wordend-1c")
 
         extracted_text = self.output_text_widget.get(start_index, end_index_word_extract)
-        print(extracted_text)
 
         index = self.output_text_widget.index("current wordend")
         first_word_until_clicked = self.output_text_widget.get("1.0", index)
-        # print(first_word_until_clicked)
 
         # assumption: we include the punctuation in word predicting for better model structure but during the suggestion, we will exclude the punctuation for better word structure
         first_word_until_clicked_split = nltk.tokenize.word_tokenize(first_word_until_clicked)
@@ -344,7 +310,6 @@ class SpellingChecker():
 
     def calculate_edit_distance(self, misspelled_word):
         # if not same as predicted word and spell is not in dict, then it is non-real word, then use min edit dist
-
         # next we are going to do this and solve how to check the error word when there is only one word is enter
         # (by adding the first word from user input into non_real_word_list)
         # the procedure is almost the same as what we done in real word error
@@ -378,7 +343,6 @@ class SpellingChecker():
         total_bigrams = len(candidate_bigrams)
 
         predicted_bigrams_probs = []
-        word_found = False
         for bigram in candidate_bigrams:
             word, probability = bigram[1], freq_dist[bigram] / total_bigrams
             is_word_found = any(word_going_to_found == word for word_going_to_found, _ in predicted_bigrams_probs)
@@ -394,11 +358,8 @@ class SpellingChecker():
         # Select the top 5 predicted words
         top_5_predictions = sorted_predictions[:5]
 
-        # Print the top 5 predicted next words
-        # print("Top 5 Predicted Next Words:")
         for word, probability in top_5_predictions:
             print("")
-            # print(top_5_predictions)
             print(f"Word: {word}, Probability: {probability:.4f}")
 
         self.process_tuple_list(top_5_predictions)
@@ -425,7 +386,7 @@ class SpellingChecker():
     # This is for search window update
     def update_list(self, event):
         user_input = self.entry.get().lower()
-        filtered_list = [word for word in word_list if user_input in word.lower()]
+        filtered_list = [word for word in word_list_exclude_punc if user_input in word.lower()]
         filtered_list.sort()
         self.text.delete(1.0, tk.END)
         for word in filtered_list:
