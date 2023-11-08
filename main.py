@@ -13,7 +13,7 @@ import string
 
 root = tk.Tk()
 
-file_path = "C:/Users/User/PycharmProjects/NLP_Project/dictionary/english_words_479k.txt"
+file_path = "C:/....../english_words_479k.txt"
 file = open(file_path, 'r', encoding='utf-8', errors='ignore')
 
 word_list = set()
@@ -27,7 +27,7 @@ for x in file:
 # Check is there any numerical value inside
 list2 = [x for x in word_list if isinstance(x, numbers.Number)]
 
-train_folder_path = 'C:/Users/User/Downloads/NLP_Group3/NLP_Group3/Corpus'
+train_folder_path = 'C:/....../Corpus'
 train_file_path = []
 bigrams_list = []
 
